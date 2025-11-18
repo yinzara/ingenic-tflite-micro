@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-INGENIC_TFLITE_MICRO_VERSION = 0.0.1
+INGENIC_TFLITE_MICRO_VERSION = 0.0.2
 INGENIC_TFLITE_MICRO_SITE = $(call github,yinzara,ingenic-tflite-micro,v$(INGENIC_TFLITE_MICRO_VERSION))
 INGENIC_TFLITE_MICRO_LICENSE = Apache-2.0
 INGENIC_TFLITE_MICRO_LICENSE_FILES = LICENSE

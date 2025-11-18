@@ -114,8 +114,9 @@ set(LIB_SRCS
     ${SRCS_TFLITE_ADDITIONAL}
 )
 
-# Create static library
+# Create static library with PIC for linking into shared objects
 add_library(tflite-micro STATIC ${LIB_SRCS})
+set_target_properties(tflite-micro PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 # KissFFT C sources
 set(KISSFFT_SRCS
