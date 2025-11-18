@@ -24,8 +24,8 @@ set(CMAKE_AR "${INGENIC_TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}ar")
 set(CMAKE_RANLIB "${INGENIC_TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}ranlib")
 set(CMAKE_STRIP "${INGENIC_TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}strip")
 
-# Sysroot - use little-endian variant for -EL flag
-set(CMAKE_SYSROOT "${INGENIC_TOOLCHAIN_PATH}/mips-linux-gnu/libc/el")
+# Sysroot
+set(CMAKE_SYSROOT "${INGENIC_TOOLCHAIN_PATH}/mips-linux-gnu/libc")
 set(CMAKE_FIND_ROOT_PATH "${CMAKE_SYSROOT}")
 
 # Search paths
