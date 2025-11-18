@@ -81,9 +81,9 @@ jobs:
         run: |
           mkdir build
           cd build
+          export INGENIC_TOOLCHAIN_PATH=$HOME/toolchain/mips-gcc540-glibc222-64bit-r3.3.0
           cmake \
             -DCMAKE_TOOLCHAIN_FILE=../cmake/mips-linux-gnu.cmake \
-            -DINGENIC_TOOLCHAIN_PATH=$HOME/toolchain/mips-gcc540-glibc222-64bit-r3.3.0 \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_EXAMPLES=OFF \
             -DBUILD_TESTS=OFF \

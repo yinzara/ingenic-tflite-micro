@@ -5,9 +5,14 @@ set(CMAKE_SYSTEM_NAME Linux)
 set(CMAKE_SYSTEM_PROCESSOR mips)
 
 # Ingenic SDK toolchain path - adjust this to your installation
+# Can be set via -DINGENIC_TOOLCHAIN_PATH=... or INGENIC_TOOLCHAIN_PATH env var
 if(NOT DEFINED INGENIC_TOOLCHAIN_PATH)
-    # Default path for Ingenic SDK T31
-    set(INGENIC_TOOLCHAIN_PATH "$ENV{HOME}/github/Ingenic-SDK-T31-1.1.1-20200508/toolchain/mips-gcc540-glibc222-64bit-r3.3.0")
+    if(DEFINED ENV{INGENIC_TOOLCHAIN_PATH})
+        set(INGENIC_TOOLCHAIN_PATH "$ENV{INGENIC_TOOLCHAIN_PATH}")
+    else()
+        # Default path for Ingenic SDK T31
+        set(INGENIC_TOOLCHAIN_PATH "$ENV{PWD}/../Ingenic-SDK-T31-1.1.1-20200508/toolchain/mips-gcc540-glibc222-64bit-r3.3.0")
+    endif()
 endif()
 
 set(TOOLCHAIN_PREFIX "mips-linux-gnu-")
