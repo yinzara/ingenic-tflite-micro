@@ -1,0 +1,14 @@
+# Build directories
+build/
+build-*/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
