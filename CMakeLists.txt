@@ -16,7 +16,6 @@ option(BUILD_TESTS "Build unit tests" OFF)
 set(TFLITE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tensorflow/lite")
 set(TFMICRO_DIR "${TFLITE_DIR}/micro")
 set(TFMICRO_KERNELS_DIR "${TFMICRO_DIR}/kernels")
-set(TFMICRO_FRONTEND_DIR "${TFLITE_DIR}/experimental/microfrontend/lib")
 set(SIGNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/signal")
 set(COMPILER_MLIR_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tensorflow/compiler/mlir")
 
@@ -62,13 +61,7 @@ if(ESP_NN_COUNT GREATER 0)
     list(REMOVE_ITEM SRCS_KERNELS ${ESP_NN_KERNELS})
 endif()
 
-# Micro frontend sources (for audio feature extraction)
-file(GLOB SRCS_MICRO_FRONTEND
-    "${TFMICRO_FRONTEND_DIR}/*.c"
-    "${TFMICRO_FRONTEND_DIR}/*.cc"
-)
-
-# Signal processing sources
+# Signal processing sources (for audio feature extraction)
 file(GLOB SIGNAL_MICRO_KERNELS
     "${SIGNAL_DIR}/micro/kernels/*.c"
     "${SIGNAL_DIR}/micro/kernels/*.cc"
@@ -92,6 +85,8 @@ set(SRCS_TFLITE_ADDITIONAL
     "${TFLITE_DIR}/kernels/kernel_util.cc"
     "${TFLITE_DIR}/micro/memory_planner/greedy_memory_planner.cc"
     "${TFLITE_DIR}/micro/memory_planner/linear_memory_planner.cc"
+    "${TFLITE_DIR}/micro/memory_planner/non_persistent_buffer_planner_shim.cc"
+    "${TFLITE_DIR}/kernels/internal/runtime_shape.cc"
     "${TFLITE_DIR}/micro/arena_allocator/non_persistent_arena_buffer_allocator.cc"
     "${TFLITE_DIR}/micro/arena_allocator/persistent_arena_buffer_allocator.cc"
     "${TFLITE_DIR}/micro/arena_allocator/recording_single_arena_buffer_allocator.cc"
@@ -115,13 +110,18 @@ set(LIB_SRCS
     ${SRCS_MICRO}
     ${SRCS_KERNELS}
     ${SRCS_TFLITE_BRIDGE}
-    ${SRCS_MICRO_FRONTEND}
     ${SIGNAL_SRCS}
     ${SRCS_TFLITE_ADDITIONAL}
 )
 
 # Create static library
 add_library(tflite-micro STATIC ${LIB_SRCS})
+
+# KissFFT C sources
+set(KISSFFT_SRCS
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/kissfft/kiss_fft.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/kissfft/tools/kiss_fftr.c"
+)
 
 # Include directories
 target_include_directories(tflite-micro PUBLIC
@@ -131,6 +131,9 @@ target_include_directories(tflite-micro PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/ruy
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/kissfft
 )
+
+# Add KissFFT sources to library
+target_sources(tflite-micro PRIVATE ${KISSFFT_SRCS})
 
 # Compile definitions
 target_compile_definitions(tflite-micro PUBLIC
