@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential unrar
+
+      - name: Cache toolchain
+        id: cache-toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/toolchain/mips-gcc540-glibc222-64bit-r3.3.0
+          key: ingenic-t31-toolchain-gcc540-v1
+
+      - name: Download and extract Ingenic toolchain
+        if: steps.cache-toolchain.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/toolchain
+          cd ~/toolchain
+          SDK_BASE_URL="https://github.com/cgrrty/Ingenic-SDK-T31-1.1.1-20200508/raw/refs/heads/main/toolchain"
+
+          # Download RAR parts
+          for i in {1..7}; do
+            echo "Downloading toolchain.part${i}.rar..."
+            curl -L -o "toolchain.part${i}.rar" "${SDK_BASE_URL}/toolchain.part${i}.rar"
+          done
+
+          # Extract RAR archive
+          unrar x -o+ toolchain.part1.rar
+
+          # Extract toolchain tarball
+          cd gcc_540
+          tar xzf mips-gcc540-glibc222-64bit-r3.3.0.tar.gz
+
+          # Move to expected location and cleanup
+          mv mips-gcc540-glibc222-64bit-r3.3.0 ~/toolchain/
+          cd ~/toolchain
+          rm -rf gcc_540 toolchain.part*.rar
+
+      - name: Configure (cross-compile for MIPS)
+        run: |
+          mkdir build
+          cd build
+          cmake \
+            -DCMAKE_TOOLCHAIN_FILE=../cmake/mips-linux-gnu.cmake \
+            -DINGENIC_TOOLCHAIN_PATH=$HOME/toolchain/mips-gcc540-glibc222-64bit-r3.3.0 \
+            -DBUILD_EXAMPLES=OFF \
+            -DBUILD_TESTS=OFF \
+            ..
+
+      - name: Build
+        run: |
+          cd build
+          make -j$(nproc)
+
+      - name: Verify library
+        run: |
+          test -f build/libtflite-micro.a
+          echo "Library size: $(du -h build/libtflite-micro.a | cut -f1)"
+          file build/libtflite-micro.a
+          ~/toolchain/mips-gcc540-glibc222-64bit-r3.3.0/bin/mips-linux-gnu-ar -t build/libtflite-micro.a | head -20

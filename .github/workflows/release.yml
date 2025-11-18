@@ -1,0 +1,137 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (do not create release)'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version from .mk file
+        id: version
+        run: |
+          VERSION=$(grep -oP 'INGENIC_TFLITE_MICRO_VERSION\s*=\s*\K[0-9.]+' ingenic-tflite-micro.mk)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          if git ls-remote --tags origin | grep -q "refs/tags/v${{ steps.version.outputs.version }}"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Tag v${{ steps.version.outputs.version }} already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential unrar
+
+      - name: Cache toolchain
+        if: steps.check_tag.outputs.exists == 'false'
+        id: cache-toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/toolchain/mips-gcc540-glibc222-64bit-r3.3.0
+          key: ingenic-t31-toolchain-gcc540-v1
+
+      - name: Download and extract Ingenic toolchain
+        if: steps.check_tag.outputs.exists == 'false' && steps.cache-toolchain.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/toolchain
+          cd ~/toolchain
+          SDK_BASE_URL="https://github.com/cgrrty/Ingenic-SDK-T31-1.1.1-20200508/raw/refs/heads/main/toolchain"
+
+          # Download RAR parts
+          for i in {1..7}; do
+            echo "Downloading toolchain.part${i}.rar..."
+            curl -L -o "toolchain.part${i}.rar" "${SDK_BASE_URL}/toolchain.part${i}.rar"
+          done
+
+          # Extract RAR archive
+          unrar x -o+ toolchain.part1.rar
+
+          # Extract toolchain tarball
+          cd gcc_540
+          tar xzf mips-gcc540-glibc222-64bit-r3.3.0.tar.gz
+
+          # Move to expected location and cleanup
+          mv mips-gcc540-glibc222-64bit-r3.3.0 ~/toolchain/
+          cd ~/toolchain
+          rm -rf gcc_540 toolchain.part*.rar
+
+      - name: Build (cross-compile for MIPS)
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          mkdir build
+          cd build
+          cmake \
+            -DCMAKE_TOOLCHAIN_FILE=../cmake/mips-linux-gnu.cmake \
+            -DINGENIC_TOOLCHAIN_PATH=$HOME/toolchain/mips-gcc540-glibc222-64bit-r3.3.0 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_EXAMPLES=OFF \
+            -DBUILD_TESTS=OFF \
+            ..
+          make -j$(nproc)
+
+      - name: Create release archive
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          mkdir -p release/lib release/include
+          cp build/libtflite-micro.a release/lib/
+          cp -r tensorflow release/include/
+          cp -r third_party release/include/
+          cp -r signal release/include/
+          cd release
+          tar -czvf ../ingenic-tflite-micro-${{ steps.version.outputs.version }}.tar.gz .
+
+      - name: Create GitHub Release
+        if: steps.check_tag.outputs.exists == 'false' && !inputs.dry_run
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.version }}
+          body: |
+            ## TensorFlow Lite Micro for Ingenic MIPS v${{ steps.version.outputs.version }}
+
+            ### Installation
+
+            For Buildroot integration, see the [README](https://github.com/${{ github.repository }}/blob/main/README.md).
+
+            ### Changes
+
+            See [commits since previous release](https://github.com/${{ github.repository }}/commits/${{ steps.version.outputs.tag }}).
+          files: |
+            ingenic-tflite-micro-${{ steps.version.outputs.version }}.tar.gz
+          draft: false
+          prerelease: false
+
+      - name: Summary
+        run: |
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Version: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Tag: ${{ steps.version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check_tag.outputs.exists }}" == "true" ]; then
+            echo "- Status: **Skipped** (tag already exists)" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ inputs.dry_run }}" == "true" ]; then
+            echo "- Status: **Dry run** (no release created)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Status: **Released**" >> $GITHUB_STEP_SUMMARY
+          fi

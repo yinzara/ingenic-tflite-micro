@@ -14,25 +14,38 @@ This is a port of [TensorFlow Lite Micro](https://github.com/tensorflow/tflite-m
 
 ## Building
 
-### With Thingino Buildroot (Recommended)
+### With Buildroot (Recommended)
 
-The easiest way to build is as part of the Thingino firmware:
+The easiest way to build is as a Buildroot external package:
 
-1. Copy the package to thingino-firmware:
+1. Copy the package files to your Buildroot external tree:
    ```bash
-   cp -r package/ingenic-tflite-micro /path/to/thingino-firmware/package/
+   mkdir -p /path/to/your-external/package/ingenic-tflite-micro
+   cp ingenic-tflite-micro.mk Config.in /path/to/your-external/package/ingenic-tflite-micro/
    ```
 
-2. Enable in menuconfig:
+2. Add to your external tree's `Config.in`:
+   ```
+   source "$BR2_EXTERNAL_YOUR_NAME_PATH/package/ingenic-tflite-micro/Config.in"
+   ```
+
+3. Add to your external tree's `external.mk` (if not already present):
+   ```
+   include $(sort $(wildcard $(BR2_EXTERNAL_YOUR_NAME_PATH)/package/*/*.mk))
+   ```
+
+4. Enable in menuconfig:
    ```bash
    make menuconfig
-   # Navigate to: Target packages -> Libraries -> ingenic-tflite-micro
+   # Navigate to: External options -> ingenic-tflite-micro
    ```
 
-3. Build:
+5. Build:
    ```bash
-   make rebuild-ingenic-tflite-micro
+   make ingenic-tflite-micro-rebuild
    ```
+
+The library will be installed to `$(STAGING_DIR)/usr/lib/libtflite-micro.a` with headers in `$(STAGING_DIR)/usr/include/`.
 
 ### Standalone Cross-compilation
 

@@ -1,0 +1,17 @@
+config BR2_PACKAGE_INGENIC_TFLITE_MICRO
+	bool "ingenic-tflite-micro"
+	depends on BR2_INSTALL_LIBSTDCPP
+	depends on BR2_TOOLCHAIN_GCC_AT_LEAST_5
+	help
+	  TensorFlow Lite Micro port for Ingenic MIPS32 SoCs
+	  (T31, T40, T41, etc.).
+
+	  Provides a static library for running TensorFlow Lite
+	  models on embedded Linux systems with Ingenic processors.
+	  Includes signal processing library for audio feature
+	  extraction.
+
+	  https://github.com/yinzara/ingenic-tflite-micro
+
+comment "ingenic-tflite-micro needs a toolchain w/ C++, gcc >= 5"
+	depends on !BR2_INSTALL_LIBSTDCPP || !BR2_TOOLCHAIN_GCC_AT_LEAST_5
